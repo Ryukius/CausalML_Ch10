@@ -1,0 +1,27 @@
+{
+    "id": "3F6E521B",
+    "path": "~/Documents/Nakajima_Seminar/CausalML_Ch10/CausalML_Ch10.2.ToyCar-10.3DAG.Rmd",
+    "project_path": "CausalML_Ch10.2.ToyCar-10.3DAG.Rmd",
+    "type": "r_markdown",
+    "hash": "182502860",
+    "contents": "",
+    "dirty": false,
+    "created": 1733134662880.0,
+    "source_on_save": true,
+    "relative_order": 1,
+    "properties": {
+        "chunk_output_type": "inline",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "364,94",
+        "scrollLine": "356"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1733134694,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1733134694439,
+    "read_only": false,
+    "read_only_alternatives": []
+}

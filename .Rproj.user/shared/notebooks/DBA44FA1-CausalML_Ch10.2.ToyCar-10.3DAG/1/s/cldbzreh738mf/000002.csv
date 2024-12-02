@@ -1,0 +1,60 @@
+"1","
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyBpbnN0YWxsLnBhY2thZ2VzKFwicmVudlwiKVxuIyByZW52OjpyZXN0b3JlKClcbiMgcmVtb3Rlczo6aW5zdGFsbF9naXRodWIoXCJtbHItb3JnL21scjNleHRyYWxlYXJuZXJzXCIsIGZvcmNlID0gVFJVRSkgIyBuZWVkZWQgdG8gcnVuIGJvb3N0aW5nXG5cbnBhY21hbjo6cF9sb2FkKFxuICBkYWdpdHR5LFxuICBnZ2RhZyxcbiAgeHRhYmxlLFxuICBoZG0sXG4gIHNhbmR3aWNoLFxuICBnZ3Bsb3QyLFxuICByYW5kb21Gb3Jlc3QsXG4gIGRhdGEudGFibGUsXG4gIGdsbW5ldCxcbiAgcnBhcnQsXG4gIGdibSxcbiAgRG91YmxlTUwsIFxuICBtbHIzbGVhcm5lcnMsIFxuICBtbHIzLCBcbiAgZGF0YS50YWJsZSwgXG4gIHJhbmRvbUZvcmVzdCwgXG4gIHJhbmdlcixcbiAgbWxyM2V4dHJhbGVhcm5lcnMsXG4gIG1ib29zdFxuKVxuYGBgIn0= -->
+
+```r
+# install.packages(\"renv\")
+# renv::restore()
+# remotes::install_github(\"mlr-org/mlr3extralearners\", force = TRUE) # needed to run boosting
+
+pacman::p_load(
+  dagitty,
+  ggdag,
+  xtable,
+  hdm,
+  sandwich,
+  ggplot2,
+  randomForest,
+  data.table,
+  glmnet,
+  rpart,
+  gbm,
+  DoubleML, 
+  mlr3learners, 
+  mlr3, 
+  data.table, 
+  randomForest, 
+  ranger,
+  mlr3extralearners,
+  mboost
+)
+```
+
+<!-- rnb-source-end -->
+"
+"0","```r
+# install.packages(\"renv\")
+# renv::restore()
+# remotes::install_github(\"mlr-org/mlr3extralearners\", force = TRUE) # needed to run boosting
+
+pacman::p_load(
+  dagitty,
+  ggdag,
+  xtable,
+  hdm,
+  sandwich,
+  ggplot2,
+  randomForest,
+  data.table,
+  glmnet,
+  rpart,
+  gbm,
+  DoubleML, 
+  mlr3learners, 
+  mlr3, 
+  data.table, 
+  randomForest, 
+  ranger,
+  mlr3extralearners,
+  mboost
+)
+```"

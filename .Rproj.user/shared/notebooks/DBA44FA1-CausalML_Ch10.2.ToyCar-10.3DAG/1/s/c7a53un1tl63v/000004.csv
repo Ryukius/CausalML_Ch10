@@ -1,0 +1,16 @@
+"1","
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuXG5hZGp1c3RtZW50U2V0cyhHMywgXCJEXCIsIFwiWVwiLCBlZmZlY3QgPSBcInRvdGFsXCIpXG5gYGAifQ== -->
+
+```r
+
+adjustmentSets(G3, \"D\", \"Y\", effect = \"total\")
+```
+
+<!-- rnb-source-end -->
+"
+"0","```r
+
+adjustmentSets(G3, \"D\", \"Y\", effect = \"total\")
+```"
+"1","{ X }
+"

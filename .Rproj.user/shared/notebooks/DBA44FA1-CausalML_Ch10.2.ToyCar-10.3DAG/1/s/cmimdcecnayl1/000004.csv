@@ -1,0 +1,14 @@
+"1","
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuXG5hZGp1c3RtZW50U2V0cyhHNCwgXCJEXCIsIFwiWVwiLCBlZmZlY3QgPSBcInRvdGFsXCIpXG5gYGAifQ== -->
+
+```r
+
+adjustmentSets(G4, \"D\", \"Y\", effect = \"total\")
+```
+
+<!-- rnb-source-end -->
+"
+"0","```r
+
+adjustmentSets(G4, \"D\", \"Y\", effect = \"total\")
+```"
