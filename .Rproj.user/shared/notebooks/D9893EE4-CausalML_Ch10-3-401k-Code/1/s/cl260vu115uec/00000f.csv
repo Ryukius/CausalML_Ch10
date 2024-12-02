@@ -1,0 +1,6 @@
+"0","# Best fit is boosted trees for both D and Y"
+"0",""
+"0","sum_best <- summaryPLR(dml2_results$coef_est, dml2_results$se, dml2_results$dtil,"
+"0","                       dml2_results$ytil, name = ""Best"")"
+"0","tableplr <- rbind(tableplr, sum_best)"
+"0","tableplr"

@@ -1,0 +1,3 @@
+"0","# Because residuals are output, reconstruct fitted values for use in ensemble"
+"0","dhat_lasso <- D - dml2_results$dtil"
+"0","yhat_lasso <- y - dml2_results$ytil"

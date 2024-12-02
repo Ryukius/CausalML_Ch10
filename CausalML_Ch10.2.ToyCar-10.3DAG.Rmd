@@ -1,0 +1,614 @@
+---
+title: "Causal ML Book Ch10.2-10.3"
+author: "Ryuki Kobayashi"
+date: "2024/11/25"
+output: html_notebook
+---
+
+## 10.2 DML Inference in the Partially Linear Regression Model
+### Revisiting the Price Elasticity for Toy Cars
+
+- おもちゃの車の価格弾力性を推定する例
+- 価格弾力性の推定について以下の部分線形モデル (Partially Linear Model, PLM) を考える
+
+\begin{equation}
+  Y = \alpha D + g(W) + \varepsilon
+\end{equation}  
+
+- 各変数は以下の通り
+  - $Y$: 販売ランクの逆数の対数 (log-reciprocal-sales-rank)
+  - $D$: 価格の対数
+  - $W$: 製品属性のベクトル  
+
+#### **Double Machine Learning (DML) を用いた $\alpha$ の推定**
+- 高次元な製品属性を使用する
+   - $W$: 各製品属性とブランド・サブカテゴリーとの交差項などを含む2083次元の属性ベクトルをとする
+- 使用する機械学習アルゴリズム
+   - Decision Tree (決定木)
+   - Gradient Boosted Trees (勾配ブースティング決定木, 1000 trees)
+   - Random Forest (ランダムフォレスト, 2000 trees)
+   - Neural Network (ニューラルネットワーク: 200 layers, 20 neurons)
+
+
+#### Table 10.3: 推定結果
+
+| Model                 | $R^2_D$ | $R^2_Y$ | Estimate  | Std. Err. | 95% CI            |
+|-----------------------|-------------|-------------|-----------|-----------|-------------------|
+| Tree                  | 0.40        | 0.19        | -0.109    | 0.018     | [-0.143, -0.074]  |
+| Boost                 | 0.41        | 0.17        | -0.102    | 0.019     | [-0.139, -0.064]  |
+| Forest                | 0.49        | 0.26        | -0.134    | 0.019     | [-0.171, -0.096]  |
+| NNet                  | 0.47        | 0.21        | -0.132    | 0.020     | [-0.171, -0.093]  |
+
+**参考: Table4.3**
+
+| Model                 | $R^2_D$ | $R^2_Y$ | Estimate  | Std. Err. | 95% CI            |
+|-----------------------|-------------|-------------|-----------|-----------|-------------------|
+| OLS ($p = 242$)    | -           | -           | 0.005     | 0.016     | [-0.026, 0.036]   |
+| OLS ($p = 2068$)   | -           | -           | -0.003    | 0.021     | [-0.045, 0.039]   |
+| OLS ($p = 2072$)   | -           | -           | -0.033    | 0.022     | [-0.076, 0.010]   |
+| Double Lasso          | 0.09        | 0.32        | -0.064    | 0.018     | [-0.099, -0.029]  |
+| Double Selection      | -           | -           | -0.074    | 0.019     | [-0.111, -0.037]  |
+| Desparsified Lasso    | -           | -           | -0.062    | 0.017     | [-0.096, -0.028]  |
+
+
+- 機械学習は全モデルで価格弾力性の推定値が負かつ信頼区間がゼロを含まず、理論的予測と一致
+- 信頼区間の比較: Double Lasso の結果よりさらに負の推定値に
+- 決定係数 $R^2$ の比較: Lassoにと比べ、非線形の機械学習モデルがよりも高い $R^2$ を達成
+  - 特に、decisin tree や Random Forest が最も高い $R^2$ を達成
+
+$\rightarrow$ 非線形モデルが共変量をより適切にコントロールできることが示唆
+
+#### **高次変換の使用: 価格弾力性の非線形性を推定**
+
+- 価格弾力性の非線形性を推定するためエルミート多項式 (Hermite polynomial) を導入
+  - 直交する多項式を使用することで、推定を安定させることができる（多重共線性の問題が起こりづらくなる）らしい
+    \begin{equation}
+    Y = \sum_{j=1}^r \alpha_j T_j(D) + g(W) + \varepsilon
+    \end{equation}
+
+
+```{r, echo=FALSE, out.width="70%",  fig.align = 'center'}
+knitr::include_graphics("figure/fig10.5.png")
+```
+
+
+- Figure 10.5: $r = 1, 2, 3, 4$ の場合を比較
+  - 弾力性は非線形 $\rightarrow$ 低価格帯で非弾力的、高価格帯ではより弾力的になる
+  - あるいは、低価格帯における confounding factor をうまくコントロールできていない
+
+---
+
+## 10.3 DML Inference in the Interactive Regression Model
+### DML Inference on APEs and ATEs
+
+次の interactive regression model (IRM) と propensity score の2つの回帰モデルの組を考える
+
+\begin{align}
+  Y & = g_0(D, X) + \varepsilon, \quad \mathbb{E}[\varepsilon | X, D] = 0, \tag{10.3.1}  \\ 
+  D & = m_0(X) + \tilde{D}, \quad \mathbb{E}[\tilde{D} | X] = 0. \tag{10.3.2}
+\end{align}
+
+- 観測されている変数の組 $W=(Y,D,X)$
+  - $Y$ は興味のあるアウトカム
+  - $D\in\{0,1\}$ は二値の処置変数 (binary treatment variable)
+  - $X$ は共変量 (controls/confounding factors)
+- $(10.2.1)$式の部分線形モデル (PLM) の一般化になっている
+  - $(10.3.1)$式より、$D$ と $X$ は加法分離的 (additive separable) でなく、共変量 \(X\) によって処置効果 (treatment effect) が非線形に異なる場合を表している
+  - $(10.3.2)$式より、$D$ と $X$ は独立ではなく、$D$ は $X$ によって決まることを明示的に表す (confounded)
+- 未知の関数 $g_0$ と $m_0$ を推定するために、機械学習アルゴリズムを使用する
+
+**興味のあるパラメタ (parameter of interest): 平均予測効果 (APE)**
+
+\begin{equation}
+   \theta_0 = \mathbb{E}[g_0(1, X) - g_0(0, X)] \tag{10.3.3}
+\end{equation}
+     
+- $D \perp Y(d) \mid X$ (無視可能性 ignorability / 条件付き独立性 ignorability) が成立している場合、APE は平均処置効果 (ATE) と一致する
+
+---
+
+#### **Neyman 直交性を満たす効率的な推定量**
+
+- $g_0$ と $m_0$ の推定に関するわずかな推定誤差が、興味のあるパラメタ $\theta_0$についてのモーメント条件に影響を与えないような推定量 $\varphi_0(W)$ を考えると、
+
+\begin{equation}
+   \theta_0 = \mathbb{E}[\varphi_0(W)], \tag{10.3.4}
+\end{equation}
+
+- 推定式 $\varphi_0(W)$は、非線形回帰と傾向スコア重み付けを組み合わせたものである
+
+\begin{equation}
+  \varphi_0(W) = \varphi_0(Y,D,X) = g_0(1, X) - g_0(0, X) + (Y - g_0(D, X))H_0,
+\end{equation}
+
+- 重み$H_0$ は、傾向スコアの逆数によって重み付けされた Horvitz-Thompson weight である
+\begin{equation}  
+  H_0 = \frac{1(D = 1)}{m_0(X)} - \frac{1(D = 0)}{1 - m_0(X)}.
+\end{equation}
+
+- 補足: "doubly robust" な定式化でもある
+  - $g_0$ または $m_0$ のいずれかが正確に定式化できていれば、$\theta$ を正確に推定できる
+
+---
+
+#### **Remark 10.3.1: Regression Adjustment or Propensity ScoreReweighting? Use both**
+
+- 回帰による推定 (Regression adjustment)
+
+\begin{equation}
+  \theta_0=\mathrm{E}\left[g_0(1, X)-g_0(0, X)\right],
+\end{equation}
+
+- 傾向スコア重み付け (Propensity Score Reweighting)
+
+\begin{equation}
+  \theta_0=\mathrm{E}\left[Y H_0\right] .
+\end{equation}
+
+- 上記2つの手法は、 Neyman Orthogonality を満たさない
+
+---
+
+#### **推定アルゴリズム: DML for APEs/ATEs**
+
+1. Cross-fitting
+    - データを、ほぼ同じサイズになるよう、ランダムに $\{I_k\}_{k=1}^K$ の fold へと $K$ 分割する
+    - フォルド \(k\) を除いたデータで \(g_0\) と \(m_0\) の推定値 $m_{[k]}$ と $g_{[k]}$ を得る
+    - 各 fold \(i \in I_k\) について、下記を計算する
+
+     \begin{equation}
+     \hat{\varphi}(W_i) = \hat{g}_{[k]}(1, X_i) - \hat{g}_{[k]}(0, X_i) + (Y_i - \hat{g}_{[k]}(D_i, X_i))\hat{H}_i,
+     \end{equation}
+     ここで:
+     \begin{equation}
+     \hat{H}_i = \frac{1(D_i = 1)}{\hat{m}_{[k]}(X_i)} - \frac{1(D_i = 0)}{1 - \hat{m}_{[k]}(X_i)}. 
+     \end{equation}
+
+3. 推定量から、$\theta$ の推定値を得る
+   \begin{equation}
+    \hat{\theta} = \frac{1}{n} \sum_{i=1}^n \hat{\varphi}(W_i).
+   \end{equation}
+
+4. 標準誤差の計算
+   - 分散の推定量
+     \begin{equation}
+        \hat{V} = \frac{1}{n} \sum_{i=1}^n (\hat{\varphi}(W_i) - \hat{\theta})^2.
+     \end{equation}
+   - 標準誤差
+     \begin{equation}
+        \text{Std. Error} = \sqrt{\frac{\hat{V}}{n}}. 
+     \end{equation}
+
+---
+
+#### **Remark 10.3.2: Trimming**
+- 傾向スコア $m_{[k]}$が 0 または 1 に近い場合、$(|\hat{H}_i|)$ が極端に大きくなる
+  - これは、overlap 条件が満たされていない可能性を示唆している
+- 傾向スコアの極端な値を取り除く (trimming) ことで対処
+  - (\(\varepsilon = 0.01\)) し、\(\bar{H} = 100\) とすることが多い
+  - 理論的・実践的にどのような trimming の値が適切か、明らかにはなっておらず、研究の発展の余地がある領域
+
+---
+
+#### **Theorem 10.3.1: Adaptive Inference on ATE with DML**
+- 以下の条件を満たすと仮定する
+  - Overlap 条件 (\(\varepsilon < m_0(X) < 1 - \varepsilon\)) を満たす
+  - 機械学習による \(g_0, m_0\) の推定が十分に正確である。つまり、下記を満たす
+  \begin{equation}
+    \left\|\hat{g}_{[k]}-g_0\right\|_{L^2}+\left\|\hat{m}_{[k]}-m_0\right\|_{L^2}+\sqrt{n}\left\|_{\delta[k]}-g_0\right\|_{L^2}\left\|\hat{m}_{[k]}-m_0\right\|_{L^2} \approx 0,
+  \end{equation}
+  
+- 局外母数 (nuisance parameter) の推定誤差は、処置効果 \(\hat{\theta}\) の推定に影響を与えない
+  \begin{equation}
+    \sqrt{n}\left(\hat{\theta}-\theta_0\right) \approx \sqrt{n} \mathbb{E}_n\left[\varphi_0(W)-\theta_0\right] .
+  \end{equation}
+  
+- 推定量は $\sqrt{n}$一致性を満たし、次の分布に収束する
+    \begin{equation}
+      \sqrt{n}(\hat{\theta} - \theta_0) \approx \mathcal{N}(0, V), 
+    \end{equation}
+    ここで、
+    \begin{equation}
+    V = \mathbb{E}[(\varphi_0(W) - \theta_0)^2]. 
+    \end{equation}
+    
+- $g_0$ と $m_0$ の推定にはトレードオフがある可能性があると書いてあったが、なぜ？
+
+---
+
+### DML Inference for GATEs and ATETs
+
+#### **GATEs (Group Average Treatment Effects)**
+
+- 特定のグループにおける平均処置効果 (GATE) を推定することもできる
+\begin{equation}
+  \theta_0 = \mathbb{E}[g_0(1, X) - g_0(0, X) \mid G = 1]
+\end{equation}
+
+- 例: ワクチンが与える年齢階層別の影響を知りたい
+  - $G = 1$ を 13歳以上19歳以下 ($13 \leq \text{Age} \leq 19$) の若者
+  - $G = 1$ を $65 \leq \text{Age}$  の高齢者
+
+- 次の推定量で推定が可能
+\begin{equation}
+  \theta_0=\mathrm{E}\left[\varphi_0(X) \mid G=1\right]=\mathrm{E}\left[\varphi_0(X) G\right] / \mathrm{P}(G=1) .
+\end{equation}
+
+
+#### **ATET (Average Treatment Effect on the Treated)**
+
+\begin{equation}
+  \theta_0 = \mathbb{E}[g_0(1, X) - g_0(0, X) \mid D = 1]
+\end{equation}
+
+---
+
+#### **Remark 10.3.3: Misspecification of PLM as inference on an overlap-weighted APE**
+
+- PLM の仮定が成り立たない場合に、PLM の推定量 $\beta$ は何を表すか？
+- IRM であるとき、$\tilde{Y}$ の $\tilde{D}$ に関する BLP (best linear predictor) がどうなるかを見るため、まず以下の式を考える
+\begin{equation}
+  g_0(D, X) = g_0(0, X) + D(g_0(1, X) - g_0(0, X))
+\end{equation}
+  - IRMは、$Y$ の非線形な予測部分と、$D$ の係数部分に分けられる
+  - $g_0(0,X)$ は、PLM における $\ell(X)$ と同じ役割を果たす
+
+- $\tilde{Y}$ は、以下のように書ける
+
+\begin{equation}
+  \tilde{Y}=\tilde{D}\left(g_0(1, X)-g_0(0, X)\right)+\epsilon .
+\end{equation}
+
+- Theorem 10.2.1 の (10.2.3) 式より、$\beta$ の定義は
+
+\begin{equation}
+  \beta:=\{b: E[(\tilde{Y}-b \tilde{D}) \tilde{D}]=0\}=\left(\mathrm{E}\left[\tilde{D}^2\right]\right)^{-1}     \mathrm{E}[\tilde{D} \tilde{Y}],
+\end{equation}
+
+- $\mathrm{E}\left[\tilde{D}^2 \mid X\right]=m_0(X)\left(1-m_0(X)\right)$ であることを利用し、$\beta$ を次のような $m_0(X)$ と $g_0(X)$ の式に書き換える
+
+\begin{align}
+  &\beta = \frac{\mathrm{E}[\tilde{D} \tilde{Y}]}{\mathrm{E}\left[\tilde{D}^2\right]} \\
+  \Rightarrow &\beta = \frac{\mathrm{E}[\tilde{D} \left\{\tilde{D}\left(g_0(1, X)-g_0(0, X)\right)+\epsilon\right\}]}{\mathrm{E}\left[m_0(X)\left(1-m_0(X)\right)\right]} \quad \because \text{$\tilde{Y}$ を代入} \\
+  \Rightarrow &\beta = \frac{\mathrm{E}[\tilde{D}^2\left(g_0(1, X)-g_0(0, X)\right)]}{\mathrm{E}\left[m_0(X)\left(1-m_0(X)\right)\right]} + \frac{\mathrm{E}[\tilde{D} \epsilon]}{\mathrm{E}\left[m_0(X)\left(1-m_0(X)\right)\right]} \\
+
+  \therefore ~ &\beta = \frac{\mathbb{E}[m_0(X)(1 - m_0(X))(g_0(1, X) - g_0(0, X))]}{\mathbb{E}[m_0(X)(1 - m_0(X))]}
+\end{align}
+
+- この重みは、$m_0(X) \approx 1/2$ 付近に大きな重みを、$m_0(X) \approx 0$ または $m_0(X) \approx 1$ に小さな重みを与える
+  - 傾向スコアのような、解釈のしやすい重みになっていない
+  - 傾向スコア: 処置群については対照群と近いものに大きな重みを、対照群については処置群と近いものに大きな重みを与える
+
+---
+
+**＜補足: $\mathrm{E}\left[\tilde{D}^2 \mid X\right]=m_0(X)\left(1-m_0(X)\right)$ の導出＞**
+
+- (10.3.2)式より、残差 $\tilde{D}$ は以下のように表される
+\begin{align}
+  &D = m_0(X) + \tilde{D}, \quad \mathbb{E}[\tilde{D} | X] = 0 \\ \tag{10.3.2} 
+  \Rightarrow & \tilde{D} = D - m_0(X)
+\end{align}
+
+- $\mathbb{E}[\tilde{D}^2 \mid X]$ は
+\begin{align}
+  &\mathbb{E}[\tilde{D}^2 \mid X] = \mathbb{E}[(D - m_0(X))^2 \mid X] \\
+  \Rightarrow &\mathbb{E}[\tilde{D}^2 \mid X] = \mathbb{E}[D^2 \mid X] - 2m_0(X)\mathbb{E}[D \mid X] + m_0(X)^2
+\end{align}
+
+- \(D \in \{0, 1\}\) であり、\(D^2 = D\) であることと \(\mathbb{E}[D \mid X] = m_0(X)\) を利用すると、
+\begin{align}
+  &\mathbb{E}[\tilde{D}^2 \mid X] = \mathbb{E}[D \mid X] - 2m_0(X)m_0(X) + m_0(X)^2 \\
+  \Rightarrow &\mathbb{E}[\tilde{D}^2 \mid X] = m_0(X) - 2m_0(X)^2 + m_0(X)^2 \\
+  \Rightarrow &\mathbb{E}[\tilde{D}^2 \mid X] = m_0(X) - m_0(X)^2 \\
+  \because ~ &\mathbb{E}[\tilde{D}^2 \mid X] = m_0(X)(1 - m_0(X)).
+\end{align}
+
+---
+
+#### **Remark 10.3.3: 連続な処置の場合**
+
+- 連続的な処置 $D \in [0, 1]$ の場合も、$g_0(D, X)$ をベースライン + $D$ による効果として分解して記述できる
+\begin{equation}
+  g_0(D, X) = g_0(0, X) + \int_0^D t \cdot g_0'(t, X) dt
+\end{equation}
+- すると、$\beta$ を weighted average derivative として書ける
+\begin{equation}
+  \beta = \frac{\mathbb{E}[w(D, X) g_0'(D, X)]}{\mathbb{E}[w(D, X)]}
+\end{equation}
+ここで、重み $w(D, X)$ は次のように定義される
+\begin{equation}
+  w(D, X) = \frac{\mathbb{E}[\tilde{D} \mid D > d, X]}{f(D \mid X)}
+\end{equation}
+
+- binary にせよ continuous にせよ、解釈が難しいものになっている
+
+---
+
+### The Effect of 401(k) Eligibility on Net Financial Assets
+
+- Poterba et al. (1994, 1995) の、企業型確定拠出年金制度401(k)への加入資格 が個人の金融資産に与える影響を、本節で説明してきたDMLを用いて再分析する
+
+- **推定における課題**
+  - 「401(k)のプランを提供している会社で働く」という処置は、ランダム割当ではない（選択バイアスの問題）
+- **解決策**
+  - 401(k) が始まった当初、労働者は401(k)が提供されているかどうかより、収入など別の側面に基づいて職業を選択している可能性が高いというアイディアを用いる
+  - **条件付き独立性の仮定**: 収入や他の職業選択の要因を調整した後は、401(k)の加入資格は外生的である
+- **条件付き独立性と関数型に関する議論**
+  - Poterba et al. や他の研究は、事前に定義された制約の厳しい関数型を仮定しているが、正確に共変量を調整できているか？という疑問がある
+  - 一方で、より柔軟なモデルを使うと、検出力が低下する
+  - 本節では、両方を比べてみる
+
+---
+
+### **変数の設定とDAG**
+
+-  **変数の定義**
+   - $Y$: 個人の金融資産 (net financial assets)
+   - $D$: 401(k)加入資格
+   - $X$: 年齢、性別、収入、家族構成、教育年数、婚姻状況、共働きかどうか、年金加入状況、持ち家かどうか、IRA加入状況（iDeCo的な？）、など
+   - $F$: 観測されない企業の属性
+   - $M$: 従業員の401(k)支出額に応じて、従業員が支出する額 (employer match amount) であり、mediator になっている
+   - $U$: 観測されない交絡因子
+- **DAGのOverview**
+   - Figure 10.6: 共変量 $X$ を調整すれば因果推定が可能な構造
+      - $X$ が valid adjustment set である
+   - Figure 10.7: Mediator $M$ がある場合
+      - 総効果は識別可能な場合がある
+      - ただし、$M$ が $F$ に依存すると、$X$ だけの調整では因果推定が不十分
+   - Figure 10.8: 観測されない交絡因子 $U$ が $Y$ に直接影響を与えると、因果推定は困難
+
+---
+
+### **DAG用コード**
+
+- この部分の Replication は[小林のGitHub]()に上がっているので、各々の環境で実行可能
+  - ターミナル / コマンドプロンプトで、`git clone` を実行すれば良い
+- `renv` による仮想環境を使うことで、パッケージのバージョン管理を行っている
+  - `renv::restore()` を行うことで、このノートブックで使用しているパッケージをインストール可能
+  - `renv` パッケージをダウンロードしていない人は、最初に `install.packages("renv")` を実行する必要がある
+- パッケージの読み込みには `pacman::p_load()` がおすすめ
+  - 未インストールのパッケージを自動でインストールしてくれる
+
+
+```{r}
+# install.packages("renv")
+# renv::restore()
+# remotes::install_github("mlr-org/mlr3extralearners", force = TRUE) # needed to run boosting
+
+pacman::p_load(
+  dagitty,
+  ggdag,
+  xtable,
+  hdm,
+  sandwich,
+  ggplot2,
+  randomForest,
+  data.table,
+  glmnet,
+  rpart,
+  gbm,
+  DoubleML, 
+  mlr3learners, 
+  mlr3, 
+  data.table, 
+  randomForest, 
+  ranger,
+  mlr3extralearners,
+  mboost
+)
+```
+
+
+---
+
+#### **Figure 10.6: $X$ を調整すれば因果推定が可能な構造**
+
+
+```{r}
+# generate a DAGs and plot them
+
+G1 <- dagitty('dag{
+Y [outcome,pos="4, 0"]
+D [exposure,pos="0, 0"]
+X [confounder, pos="2,-1"]
+F [uobserved, pos="0, -1"]
+D -> Y
+X -> D
+F -> X
+F -> D
+X -> Y}')
+
+G1_dag <- ggdag(G1) + theme_dag()
+
+G1_dag$layers[[3]]$mapping <- 
+  aes(colour = c("Observed", "Unobserved")[as.numeric(name == "F") + 1])
+G1_dag + scale_color_manual(values = c("black", "blue")) +
+  theme(legend.position.inside = c(0.8, 0.8))
+```
+
+
+```{r}
+adjustmentSets(G1, "D", "Y", effect = "total")
+```
+
+```{r}
+# generate a couple of DAGs and plot them
+
+G2 <- dagitty('dag{
+Y [outcome,pos="4, 0"]
+D [exposure,pos="0, 0"]
+X [confounder, pos="2,-1"]
+F [uobserved, pos="0, -1"]
+D -> Y
+X -> D
+X -> F
+F -> D
+X -> Y}')
+
+
+G2_dag <- ggdag(G2) + theme_dag()
+
+G2_dag$layers[[3]]$mapping <- 
+  aes(colour = c("Observed", "Unobserved")[as.numeric(name == "F") + 1])
+G2_dag + scale_color_manual(values = c("black", "blue")) +
+  theme(legend.position.inside = c(0.8, 0.8))
+```
+
+```{r}
+adjustmentSets(G2, "D", "Y", effect = "total")
+```
+
+```{r}
+G3 <- dagitty('dag{
+Y [outcome,pos="4, 0"]
+D [exposure,pos="0, 0"]
+X [confounder, pos="2,-1"]
+F [unobserved, pos="0, -1"]
+U [unobserved, pos="2, -2"]
+D -> Y
+X -> D
+F -> D
+U -> F
+U -> X
+U -> D
+X -> Y}')
+
+G3_dag <- ggdag(G3) + theme_dag()
+
+G3_dag$layers[[3]]$mapping <- 
+  aes(colour = c("Observed", "Unobserved")[as.numeric(name %in% c("F","U")) + 1])
+G3_dag + scale_color_manual(values = c("black", "blue")) +
+  theme(legend.position.inside = c(0.8, 0.8))
+
+adjustmentSets(G3, "D", "Y", effect = "total")
+
+```
+
+- **$F$ が直接アウトカム $Y$ に影響を与える場合、識別はできない**
+
+```{r}
+G4 <- dagitty('dag{
+Y [outcome,pos="4, 0"]
+D [exposure,pos="0, 0"]
+X [confounder, pos="2,-1"]
+F [unobserved, pos="0, -1"]
+U [unobserved, pos="2, -2"]
+D -> Y
+X -> D
+F -> D
+U -> F
+U -> X
+U -> D
+F -> Y
+X -> Y}')
+
+
+G4_dag <- ggdag(G4) + theme_dag()
+
+G4_dag$layers[[3]]$mapping <- 
+  aes(colour = c("Observed", "Unobserved")[as.numeric(name %in% c("F","U")) + 1])
+G4_dag + scale_color_manual(values = c("black", "blue")) +
+  theme(legend.position.inside = c(0.8, 0.8))
+
+adjustmentSets(G4, "D", "Y", effect = "total")
+```
+
+---
+
+#### **Figure 10.7: mediator  $M$ がある場合**
+
+```{r}
+G5 <- dagitty('dag{
+Y [outcome,pos="4, 0"]
+D [exposure,pos="0, 0"]
+X [confounder, pos="2,-2"]
+F [unobserved, pos="0, -2"]
+U [unobserved, pos="2, -3"]
+M [unobserved, pos="3, -.1"]
+D -> Y
+X -> D
+F -> D
+U -> F
+U -> X
+U -> D
+D -> M
+M -> Y
+X -> M
+X -> Y}')
+
+G5_dag <- ggdag(G5) + theme_dag()
+
+G5_dag$layers[[3]]$mapping <- 
+  aes(colour = c("Observed", "Unobserved")[as.numeric(name %in% c("F","U", "M")) + 1])
+G5_dag + scale_color_manual(values = c("black", "blue")) +
+  theme(legend.position.inside = c(0.8, 0.8))
+
+print(adjustmentSets(G5, "D", "Y", effect = "total"))
+
+```
+
+- **$F$ が直接 Mediator $M$ に影響を与える場合、識別はできない**
+
+
+```{r}
+G6 <- dagitty('dag{
+Y [outcome,pos="4, 0"]
+D [exposure,pos="0, 0"]
+X [confounder, pos="2,-2"]
+F [unobserved, pos="0, -2"]
+U [unobserved, pos="2, -3"]
+M [unobserved, pos="3, -.1"]
+D -> Y
+X -> D
+F -> D
+U -> F
+U -> X
+D -> M
+F -> M
+U -> D
+M -> Y
+X -> M
+X -> Y}')
+
+G6_dag <- ggdag(G6) + theme_dag()
+
+G6_dag$layers[[3]]$mapping <- 
+  aes(colour = c("Observed", "Unobserved")[as.numeric(name %in% c("F","U", "M")) + 1])
+G6_dag + scale_color_manual(values = c("black", "blue")) +
+  theme(legend.position.inside = c(0.8, 0.8))
+
+print(adjustmentSets(G6, "D", "Y"), effect = "total")
+```
+
+**観測されない交絡因子$U$が直接アウトカム$Y$に影響を与える場合、識別はできない**
+
+```{r}
+G7<- dagitty('dag{
+Y [outcome,pos="4, 0"]
+D [exposure,pos="0, 0"]
+X [confounder, pos="2,-2"]
+F [unobserved, pos="0, -2"]
+U [unobserved, pos="2, -3"]
+M [unobserved, pos="3, -.1"]
+D -> Y
+X -> D
+F -> D
+U -> F
+U -> X
+D -> M
+U -> D
+M -> Y
+X -> M
+X -> Y
+U -> Y}')
+
+G7_dag <- ggdag(G7) + theme_dag()
+
+G7_dag$layers[[3]]$mapping <- 
+  aes(colour = c("Observed", "Unobserved")[as.numeric(name %in% c("F","U", "M")) + 1])
+G7_dag + scale_color_manual(values = c("black", "blue")) +
+  theme(legend.position.inside = c(0.8, 0.8))
+
+print(adjustmentSets(G7, "D", "Y"), effect = "total")
+```
+

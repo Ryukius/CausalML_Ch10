@@ -1,0 +1,25 @@
+"0","table <- matrix(0, 4, 4)"
+"0","table[1, 1:4] <- c(lasso_irm, forest_irm, tree_irm, boost_irm)"
+"0","table[2, 1:4] <- c(lasso_std_irm, forest_std_irm, tree_std_irm, boost_std_irm)"
+"0","table[3, 1:4] <- c(lasso_y_irm, forest_y_irm, tree_y_irm, boost_y_irm)"
+"0","table[4, 1:4] <- c(lasso_d_irm, forest_d_irm, tree_d_irm, boost_d_irm)"
+"0","rownames(table) <- c(""Estimate"", ""Std.Error"", ""RMSE Y"", ""RMSE D"")"
+"0","colnames(table) <- c(""Lasso"", ""Random Forest"", ""Trees"", ""Boosting"")"
+"0","tab <- xtable(table, digits = 2)"
+"0","tab"
+"1","% latex table generated in R 4.4.2 by xtable 1.8-4 package
+% Mon Dec  2 19:07:53 2024
+\begin{table}[ht]
+\centering
+\begin{tabular}{rrrrr}
+  \hline
+ & Lasso & Random Forest & Trees & Boosting \\ 
+  \hline
+Estimate & 7906.19 & 7905.57 & 7987.06 & 8846.44 \\ 
+  Std.Error & 1115.90 & 1319.97 & 1159.67 & 1210.31 \\ 
+  RMSE Y & 71999.94 & 55392.98 & 57873.94 & 54969.31 \\ 
+  RMSE D & 0.44 & 0.46 & 0.46 & 0.45 \\ 
+   \hline
+\end{tabular}
+\end{table}
+"

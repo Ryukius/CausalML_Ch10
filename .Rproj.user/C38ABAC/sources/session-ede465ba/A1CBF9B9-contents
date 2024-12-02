@@ -1,0 +1,208 @@
+---
+title: "Causal ML Book Ch10.2-10.3"
+author: "Ryuki Kobayashi"
+date: "2024/11/25"
+output: html_notebook
+---
+
+## 10.2 DML Inference in the Partially Linear Regression Model
+### Revisiting the Price Elasticity for Toy Cars
+
+- おもちゃの車の価格弾力性を推定する例 (Ch.0)
+- 価格弾力性 $\alpha$ の推定について、以下の部分線形モデル (Partially Linear Model, PLM) を考える
+  \[
+  Y = \alpha D + g(W) + \varepsilon
+  \]  
+  - \( Y \): 販売ランクの逆数の対数 (log-reciprocal-sales-rank)
+  - \( D \): 価格の対数
+  - \( W \): 製品属性のベクトル  
+
+---
+
+#### Double Machine Learning (DML) を用いた $\alpha$ の推定
+- 高次元な製品属性を使用する：
+   - \( W \): 各製品属性とブランド・サブカテゴリーとの交差項などを含む2083次元の属性ベクトルをとする
+- 使用する機械学習アルゴリズム
+   - Decision Tree (決定木)
+   - Gradient Boosted Trees (勾配ブースティング決定木, 1000 trees)
+   - Random Forest (ランダムフォレスト, 2000 trees)
+   - Neural Network (ニューラルネットワーク: 200 layers, 20 neurons)
+
+---
+
+#### Table 10.3: 推定結果
+
+| Model                 | \( R^2_D \) | \( R^2_Y \) | Estimate  | Std. Err. | 95% CI            |
+|-----------------------|-------------|-------------|-----------|-----------|-------------------|
+| Tree                  | 0.40        | 0.19        | -0.109    | 0.018     | [-0.143, -0.074]  |
+| Boost                 | 0.41        | 0.17        | -0.102    | 0.019     | [-0.139, -0.064]  |
+| Forest                | 0.49        | 0.26        | -0.134    | 0.019     | [-0.171, -0.096]  |
+| NNet                  | 0.47        | 0.21        | -0.132    | 0.020     | [-0.171, -0.093]  |
+
+**参考: Table4.3**
+
+| Model                 | \( R^2_D \) | \( R^2_Y \) | Estimate  | Std. Err. | 95% CI            |
+|-----------------------|-------------|-------------|-----------|-----------|-------------------|
+| OLS (\( p = 242 \))    | -           | -           | 0.005     | 0.016     | [-0.026, 0.036]   |
+| OLS (\( p = 2068 \))   | -           | -           | -0.003    | 0.021     | [-0.045, 0.039]   |
+| OLS (\( p = 2072 \))   | -           | -           | -0.033    | 0.022     | [-0.076, 0.010]   |
+| Double Lasso          | 0.09        | 0.32        | -0.064    | 0.018     | [-0.099, -0.029]  |
+| Double Selection      | -           | -           | -0.074    | 0.019     | [-0.111, -0.037]  |
+| Desparsified Lasso    | -           | -           | -0.062    | 0.017     | [-0.096, -0.028]  |
+
+
+- 機械学習は全モデルで価格弾力性の推定値が負かつ信頼区間がゼロを含まず、理論的予測と一致
+- 信頼区間の比較: Double Lasso の結果よりさらに負の推定値に
+- 決定係数 \( R^2 \) の比較: Lassoにと比べ、非線形の機械学習モデルがよりも高い \( R^2 \) を達成
+  - 特に、decisin tree や Random Forest が最も高い \( R^2 \) を達成
+
+$\rightarrow$ 非線形モデルが共変量をより適切にコントロールできることが示唆
+
+
+---
+
+#### **高次変換の使用: 価格弾力性の非線形性を推定**
+- 価格弾力性の非線形性を推定するためエルミート多項式 (Hermite polynomial) を導入
+  - 直交する多項式を使用することで、推定を安定させることができる（多重共線性の問題が起こりづらくなる）らしい
+    \[
+    Y = \sum_{j=1}^r \alpha_j T_j(D) + g(W) + \varepsilon
+    \]
+
+```{r, echo=FALSE, out.width="70%",  fig.align = 'center'}
+knitr::include_graphics("figure/fig10.5.png")
+```
+
+- Figure 10.5: \( r = 1, 2, 3, 4 \) の場合を比較
+  - 弾力性は非線形 $\rightarrow$ 低価格帯で非弾力的、高価格帯ではより弾力的になる
+  - あるいは、低価格帯における confounding factor をうまくコントロールできていない
+
+
+
+## 10.3 DML Inference in the Interactive Regression Model
+### DML Inference on APEs and ATEs
+
+- 次の interactive regression model と propensity score の2つの回帰モデルの組を考える
+
+- 処置変数が二値 (binary treatment variable, \(D \in \{0, 1\}\)) で、処置効果 (treatment effect) が異質な場合を考える
+  - "fully heterogeneous" は、共変量 \(X\) によって処置効果が非線形に異なる場合を意味している
+- アウトカム、処置変数、共変量の組 \(W = (Y, D, X)\) に対して以下のモデルを考える
+   \[
+   Y = g_0(D, X) + \varepsilon, \quad \mathbb{E}[\varepsilon | X, D] = 0 \tag{10.3.1}
+   \]
+   \[
+   D = m_0(X) + \tilde{D}, \quad \mathbb{E}[\tilde{D} | X] = 0 \tag{10.3.2}
+   \]
+   - $(10.3.1)$式は、$(10.2.1)$ 式 (部分線形モデル, PLM)の一般化 $\rightarrow$ $D$と$X$は加法分離的 (additive separable) でない
+   - $(10.3.2)$式より、$X$ と $D$ は独立ではない (confounded)
+
+- **推定したいパラメータ: 平均予測効果 (APE)**
+     \[
+     \theta_0 = \mathbb{E}[g_0(1, X) - g_0(0, X)] \tag{10.3.3}
+     \]
+   - $D \perp Y(d) \mid X$ (無視可能性 ignorability / 条件付き独立性 ignorability) が成立している場合、APE は平均処置効果 (ATE) と一致
+
+---
+
+## **方法論**
+
+### **効率的推定量の構築**
+
+1. **効率的表現**
+   - APE/ATE の効率的推定量:
+     \[
+     \theta_0 = \mathbb{E}[\varphi_0(W)], \tag{10.3.4}
+     \]
+     \[
+     \varphi_0(W) = g_0(1, X) - g_0(0, X) + (Y - g_0(D, X))H_0, \tag{10.3.5}
+     \]
+     \[
+     H_0 = \frac{1(D = 1)}{m_0(X)} - \frac{1(D = 0)}{1 - m_0(X)}. \tag{10.3.6}
+     \]
+
+   - **特徴**:
+     - \( H_0 \) (Horvitz-Thompson 重み) により、共変量の交絡を補正。
+     - この形式は **doubly robust**:
+       - \( g_0 \) または \( m_0 \) のいずれかが正確であれば、一貫性を保持。
+
+---
+
+### **Remark 10.3.1: 代替的表現の比較**
+
+- **回帰調整 (Regression Adjustment)**:
+  \[
+  \theta_0 = \mathbb{E}[g_0(1, X) - g_0(0, X)]. \tag{10.3.7}
+  \]
+- **傾向スコア重み付け (Propensity Score Reweighting)**:
+  \[
+  \theta_0 = \mathbb{E}[YH_0]. \tag{10.3.8}
+  \]
+
+- **限界**:
+  - 上記2つの表現は **Neyman Orthogonality** を満たさないため、機械学習推定に適さない。
+  - Doubly Robust 表現 (10.3.5) が機械学習ベースの推定に推奨される。
+
+---
+
+### **アルゴリズム: DML for APEs/ATEs**
+
+1. **データ分割**
+   - サンプルを \(K\) 個のフォルド \(I_1, ..., I_K\) に分割。
+
+2. **クロスフィッティング**
+   - フォルド \(k\) を除いたデータで \(g_0\) と \(m_0\) を推定。
+   - 各データポイント \(i \in I_k\) について、以下を計算:
+     \[
+     \hat{\varphi}(W_i) = \hat{g}_{[k]}(1, X_i) - \hat{g}_{[k]}(0, X_i) + (Y_i - \hat{g}_{[k]}(D_i, X_i))\hat{H}_i, \tag{10.3.9}
+     \]
+     ここで:
+     \[
+     \hat{H}_i = \frac{1(D_i = 1)}{\hat{m}_{[k]}(X_i)} - \frac{1(D_i = 0)}{1 - \hat{m}_{[k]}(X_i)}. \tag{10.3.10}
+     \]
+
+3. **推定量の計算**
+   \[
+   \hat{\theta} = \frac{1}{n} \sum_{i=1}^n \hat{\varphi}(W_i). \tag{10.3.11}
+   \]
+
+4. **標準誤差の計算**
+   - 分散推定:
+     \[
+     \hat{V} = \frac{1}{n} \sum_{i=1}^n (\hat{\varphi}(W_i) - \hat{\theta})^2. \tag{10.3.12}
+     \]
+   - 標準誤差:
+     \[
+     \text{Std. Error} = \sqrt{\frac{\hat{V}}{n}}. \tag{10.3.13}
+     \]
+
+---
+
+## **注意点と理論的保証**
+
+### **Remark 10.3.2: Trimming**
+- **課題**:
+  - Propensity score (\(m_0(X)\)) が 0 または 1 に近い場合、\(|H_i|\) が極端に大きくなる。
+- **実践的解決策**:
+  - トリミングを適用 (\(\varepsilon = 0.01\)) し、\(|H| \leq 100\) を保証。
+
+---
+
+### **Theorem 10.3.1: 推定量の収束性**
+- 条件:
+  - Overlap 条件 (\(\varepsilon < m_0(X) < 1 - \varepsilon\)) を満たす。
+  - 機械学習推定量 (\(g_0, m_0\)) が十分に正確である。
+- 結果:
+  - 推定量 \(\hat{\theta}\) の収束:
+    \[
+    \sqrt{n}(\hat{\theta} - \theta_0) \approx \mathcal{N}(0, V), \tag{10.3.14}
+    \]
+    \[
+    V = \mathbb{E}[(\varphi_0(W) - \theta_0)^2]. \tag{10.3.15}
+    \]
+
+### DML Inference for GATEs and ATETs
+
+### The Effect of 401(k) Eligibility on Net Financial Assets
+
+これで表示される
+
+こっちは行ける

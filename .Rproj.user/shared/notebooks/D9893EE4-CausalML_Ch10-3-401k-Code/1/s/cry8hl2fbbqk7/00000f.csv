@@ -1,0 +1,8 @@
+"0","dml_plr$params_names()"
+"1","[1]"
+"1"," ""ml_l"""
+"1"," ""ml_m"""
+"1","
+"
+"0","g_hat <- as.matrix(dml_plr$predictions$ml_l) # predictions of g_o"
+"0","m_hat <- as.matrix(dml_plr$predictions$ml_m) # predictions of m_o"

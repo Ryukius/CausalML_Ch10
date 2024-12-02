@@ -1,0 +1,3 @@
+"0","hist_e401 <- ggplot(data, aes(x = e401, fill = factor(e401))) +"
+"0","  geom_bar()"
+"0","hist_e401"

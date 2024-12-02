@@ -1,0 +1,5 @@
+"0",""
+"0","yhat0_tr <- dml2_results$yhat0"
+"0","yhat1_tr <- dml2_results$yhat1"
+"0","dhat_tr <- dml2_results$dhat"
+"0","yhat_tr <- dml2_results$yhat"

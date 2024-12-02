@@ -1,0 +1,7 @@
+"0","e1 <- data[data$e401 == 1, ]"
+"0","e0 <- data[data$e401 == 0, ]"
+"0","round(mean(e1$net_tfa) - mean(e0$net_tfa), 0)"
+"1","[1]"
+"1"," 19559"
+"1","
+"

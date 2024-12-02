@@ -1,0 +1,5 @@
+"0","# Constructing the controls"
+"0","x_formula <- paste(""~ 0 + poly(age, 6, raw=TRUE) + poly(inc, 8, raw=TRUE) + poly(educ, 4, raw=TRUE) "","
+"0","                   ""+ poly(fsize, 2, raw=TRUE) + male + marr + twoearn + db + pira + hown"")"
+"0","X <- as.data.table(model.frame(x_formula, X))"
+"0","head(X)"

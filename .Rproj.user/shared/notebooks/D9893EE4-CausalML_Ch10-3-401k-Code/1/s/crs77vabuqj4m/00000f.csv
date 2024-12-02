@@ -1,0 +1,6 @@
+"0","dens_net_tfa <- ggplot(data, aes(x = net_tfa, color = factor(e401), fill = factor(e401))) +"
+"0","  geom_density() +"
+"0","  xlim(c(-20000, 150000)) +"
+"0","  facet_wrap(. ~ e401)"
+"0",""
+"0","dens_net_tfa"

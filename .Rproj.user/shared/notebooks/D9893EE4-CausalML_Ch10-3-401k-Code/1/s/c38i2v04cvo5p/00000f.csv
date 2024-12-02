@@ -1,0 +1,94 @@
+"0","# DML with Boosted Trees"
+"0","set.seed(123)"
+"0","cat(sprintf(""\nDML with Boosted Trees \n""))"
+"1","
+DML with Boosted Trees 
+"
+"0","# NB: early stopping cannot easily be implemented with gbm"
+"0","## set n.trees = best, where best <- gbm.perf(dreg_boost, plot.it = FALSE)"
+"0","dreg_boost <- function(x, d) {"
+"0","  gbm(as.formula(""D~.""), cbind(data.frame(D = d), x), distribution = ""bernoulli"","
+"0","      interaction.depth = 2, n.trees = 100, shrinkage = .1)"
+"0","}"
+"0","yreg0_boost <- function(x, y) {"
+"0","  gbm(as.formula(""y~.""), cbind(data.frame(y = y), x), distribution = ""gaussian"","
+"0","      interaction.depth = 2, n.trees = 100, shrinkage = .1)"
+"0","}"
+"0","yreg1_boost <- function(x, y) {"
+"0","  gbm(as.formula(""y~.""), cbind(data.frame(y = y), x), distribution = ""gaussian"","
+"0","      interaction.depth = 2, n.trees = 100, shrinkage = .1)"
+"0","}"
+"0",""
+"0","# passing these through regression as type=""response"", and D should not be factor!"
+"0","dml2_results <- dml2_for_irm(X, D, y, dreg_boost, yreg0_boost, yreg1_boost, nfold = 5, method = ""boostedtrees"")"
+"1","fold: "
+"2","Using 100 trees...
+
+"
+"2","Using 100 trees...
+
+"
+"2","Using 100 trees...
+
+"
+"1","1"
+"1"," "
+"1"," "
+"2","Using 100 trees...
+
+"
+"2","Using 100 trees...
+
+"
+"2","Using 100 trees...
+
+"
+"1","2"
+"1"," "
+"1"," "
+"2","Using 100 trees...
+
+"
+"2","Using 100 trees...
+
+"
+"2","Using 100 trees...
+
+"
+"1","3"
+"1"," "
+"1"," "
+"2","Using 100 trees...
+
+"
+"2","Using 100 trees...
+
+"
+"2","Using 100 trees...
+
+"
+"1","4"
+"1"," "
+"1"," "
+"2","Using 100 trees...
+
+"
+"2","Using 100 trees...
+
+"
+"2","Using 100 trees...
+
+"
+"1","5"
+"1"," "
+"1"," "
+"1","point"
+"1"," "
+"1","7871.119"
+"1","se"
+"1"," "
+"1","1156.693"
+"0","sum_boost <- summaryIRM(dml2_results$coef_est, dml2_results$se, dml2_results$ytil, dml2_results$dtil,"
+"0","                        dml2_results$drhat, name = ""Boosted Trees"")"
+"0","tableirm <- rbind(tableirm, sum_boost)"
+"0","tableirm"
